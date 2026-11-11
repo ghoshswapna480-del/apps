@@ -61,6 +61,23 @@ test('one-off task dates and progress survive a reload', async ({ page }) => {
   await expect(page.getByRole('slider', { name: 'Progress for Finish project report' })).toHaveValue('45');
 });
 
+test('workspace progress bar reflects partial and completed task progress', async ({ page }) => {
+  await page.getByRole('tab', { name: /Advanced Tasks/ }).click();
+  await page.getByLabel('Task title').fill('Track progress');
+  await page.getByRole('button', { name: '+ Add Task' }).click();
+
+  const slider = page.getByRole('slider', { name: 'Progress for Track progress' });
+  const progressBar = page.getByRole('progressbar', { name: 'Daily completion' });
+
+  await setSliderValue(slider, 45);
+  await expect(progressBar).toHaveAttribute('aria-valuenow', '45');
+  await expect(page.locator('#overallProgressText')).toContainText('45% Work Progress');
+
+  await setSliderValue(slider, 100);
+  await expect(progressBar).toHaveAttribute('aria-valuenow', '100');
+  await expect(page.locator('#overallProgressText')).toContainText('100% Work Progress');
+});
+
 test('daily reset clears recurring work but preserves one-off progress', async ({ page }) => {
   const yesterday = await page.evaluate(() => {
     const date = new Date();
