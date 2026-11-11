@@ -1,0 +1,1545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DailyFlow — Daily Planner, Notes, Journal &amp; Progress Tracker</title>
+  <link rel="stylesheet" href="app.css">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .tab-btn-active {
+      background-color: #4f46e5;
+      color: #ffffff;
+      box-shadow: 0 1px 3px rgba(79, 70, 229, 0.3);
+    }
+    .tab-btn-inactive {
+      background-color: #f8fafc;
+      color: #475569;
+    }
+    .tab-btn-inactive:hover {
+      background-color: #f1f5f9;
+      color: #1e293b;
+    }
+    .code-font {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- Top Header & Continuous Progress Tracker -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
+    <div class="max-w-5xl mx-auto px-4 py-4">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-600 text-white font-bold text-sm">DF</span>
+            <h1 class="text-xl font-bold text-slate-900">DailyFlow Workspace</h1>
+            <span class="text-xs font-medium px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">Local + SQLite Sync</span>
+            <span id="streakBadge" title="Consecutive days with all routine and class items completed" class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-orange-50 text-orange-700 border border-orange-200">🔥 0-Day Streak</span>
+          </div>
+          <p id="currentDateDisplay" class="text-xs text-slate-500 mt-1">Loading today's schedule...</p>
+          <p id="storageStatus" class="text-[11px] text-slate-400" role="status">Saving in this browser when available</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Live Focus Timer Pill -->
+          <div class="flex items-center gap-1.5 bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs">
+            <span>⏱️ Focus:</span>
+            <span id="focusTimerDisplay" role="timer" aria-label="Focus timer" aria-live="off" class="code-font font-bold text-emerald-400">25:00</span>
+            <button id="toggleTimerBtn" type="button" class="ml-1 px-2 py-0.5 rounded bg-indigo-600 hover:bg-indigo-500 font-medium transition">Start</button>
+            <button id="resetTimerBtn" type="button" class="px-1.5 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-200 transition">Reset</button>
+          </div>
+          <button id="simulateReminderBtn" type="button" class="text-xs font-medium px-3 py-1.5 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 transition">
+            🔔 Check Next Reminder
+          </button>
+          <button id="enableNotificationsBtn" type="button" class="text-xs font-medium px-3 py-1.5 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 transition">
+            Enable Notifications
+          </button>
+          <button id="exportDataBtn" type="button" class="text-xs font-medium px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition">
+            ⬇ Export JSON
+          </button>
+          <button id="importDataBtn" type="button" class="text-xs font-medium px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition">
+            ⬆ Import JSON
+          </button>
+          <input id="restoreFileInput" type="file" accept="application/json,.json" class="hidden" aria-label="Select a DailyFlow JSON backup" />
+          <button id="resetDemoBtn" type="button" class="text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+            Reset Sample Data
+          </button>
+        </div>
+      </div>
+
+      <!-- Continuous Work Progress Bar -->
+      <div class="mt-4 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-600">Workspace Progress</span>
+            <span id="progressStatusBadge" class="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">In Progress</span>
+          </div>
+          <div class="text-sm font-bold text-indigo-600" id="overallProgressText">0% Completed (0/0 items)</div>
+        </div>
+        <div class="w-full h-3 bg-slate-200 rounded-full overflow-hidden">
+          <div id="overallProgressBar" role="progressbar" aria-label="Daily completion" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" class="h-full bg-gradient-to-r from-indigo-500 to-emerald-500 transition-all duration-300" style="width: 0%"></div>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3 text-xs">
+          <div class="bg-white px-3 py-2 rounded-lg border border-slate-200 flex items-center justify-between">
+            <span class="text-slate-500">⏰ Routine</span>
+            <span id="statRoutine" class="font-semibold text-slate-800">0/0</span>
+          </div>
+          <div class="bg-white px-3 py-2 rounded-lg border border-slate-200 flex items-center justify-between">
+            <span class="text-slate-500">🎓 Classes</span>
+            <span id="statClasses" class="font-semibold text-slate-800">0/0</span>
+          </div>
+          <div class="bg-white px-3 py-2 rounded-lg border border-slate-200 flex items-center justify-between">
+            <span class="text-slate-500">✅ Tasks</span>
+            <span id="statTasks" class="font-semibold text-slate-800">0/0</span>
+          </div>
+          <div class="bg-white px-3 py-2 rounded-lg border border-slate-200 flex items-center justify-between">
+            <span class="text-slate-500">📓 Notes &amp; Journal</span>
+            <span id="statEntries" class="font-semibold text-slate-800">0 entries</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reminder Banner -->
+      <div id="reminderBanner" class="hidden mt-3 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs flex items-center justify-between gap-2">
+        <div id="reminderBannerText" class="font-medium"></div>
+        <button id="closeReminderBtn" type="button" class="text-amber-700 hover:text-amber-900 font-semibold px-2 py-0.5 rounded">Dismiss</button>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="flex flex-wrap gap-1.5 mt-4" aria-label="Workspace Sections" role="tablist">
+        <button type="button" role="tab" data-tab="routine" class="tab-btn tab-btn-active text-xs sm:text-sm font-medium px-3.5 py-2 rounded-lg transition">
+          ⏰ Daily Routine
+        </button>
+        <button type="button" role="tab" data-tab="classes" class="tab-btn tab-btn-inactive text-xs sm:text-sm font-medium px-3.5 py-2 rounded-lg transition">
+          🎓 Classes
+        </button>
+        <button type="button" role="tab" data-tab="tasks" class="tab-btn tab-btn-inactive text-xs sm:text-sm font-medium px-3.5 py-2 rounded-lg transition">
+          ✅ Advanced Tasks
+        </button>
+        <button type="button" role="tab" data-tab="notes" class="tab-btn tab-btn-inactive text-xs sm:text-sm font-medium px-3.5 py-2 rounded-lg transition">
+          📝 Class &amp; Work Notes
+        </button>
+        <button type="button" role="tab" data-tab="journal" class="tab-btn tab-btn-inactive text-xs sm:text-sm font-medium px-3.5 py-2 rounded-lg transition">
+          📔 Daily Journal
+        </button>
+        <button type="button" role="tab" data-tab="devenv" class="tab-btn tab-btn-inactive text-xs sm:text-sm font-medium px-3.5 py-2 rounded-lg transition">
+          💻 Code Samples &amp; Analytics
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Workspace Content -->
+  <main class="max-w-5xl w-full mx-auto px-4 py-6 flex-1">
+
+    <!-- SECTION 1: DAILY ROUTINE & REMINDERS -->
+    <section id="section-routine" class="space-y-4">
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <h2 class="text-base font-bold text-slate-900">Add Daily Routine &amp; Reminder</h2>
+        <p class="text-xs text-slate-500 mb-3">Schedule recurring daily blocks and check them off as you move through your day.</p>
+        <form id="routineForm" class="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+          <input id="routineTime" type="time" required value="08:00" class="sm:col-span-3 px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          <input id="routineTitle" type="text" required placeholder="e.g., Morning review &amp; hydration" class="sm:col-span-5 px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          <select id="routineBlock" class="sm:col-span-2 px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="Morning">Morning</option>
+            <option value="Afternoon">Afternoon</option>
+            <option value="Evening">Evening</option>
+          </select>
+          <button type="submit" class="sm:col-span-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm px-4 py-2 rounded-lg transition">
+            + Add Block
+          </button>
+        </form>
+      </div>
+
+      <div id="routineList" class="space-y-2.5"></div>
+    </section>
+
+    <!-- SECTION 2: CLASSES SCHEDULE -->
+    <section id="section-classes" class="hidden space-y-4">
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <h2 class="text-base font-bold text-slate-900">Add Class Session</h2>
+        <p class="text-xs text-slate-500 mb-3">Track lectures, labs, or study sessions and mark them complete once attended or reviewed.</p>
+        <form id="classForm" class="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+          <input id="classTime" type="time" required value="10:00" class="sm:col-span-2 px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          <input id="classSubject" type="text" required placeholder="Subject (e.g., Computer Science 101)" class="sm:col-span-4 px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          <input id="classTopic" type="text" required placeholder="Topic or Room (e.g., Lab 204 - Arrays)" class="sm:col-span-4 px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          <button type="submit" class="sm:col-span-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm px-4 py-2 rounded-lg transition">
+            + Add Class
+          </button>
+        </form>
+      </div>
+
+      <div id="classList" class="space-y-2.5"></div>
+    </section>
+
+    <!-- SECTION 3: ADVANCED TASK LIST -->
+    <section id="section-tasks" class="hidden space-y-4">
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+          <div>
+            <h2 class="text-base font-bold text-slate-900">Advanced Task List</h2>
+            <p class="text-xs text-slate-500">Choose one-off tasks with due dates or daily recurring tasks. One-off progress carries across days.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <label for="taskFilter" class="text-xs text-slate-500 font-medium">Filter:</label>
+            <select id="taskFilter" class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white">
+              <option value="all">All Tasks</option>
+              <option value="pending">Active Only</option>
+              <option value="completed">Completed Only</option>
+              <option value="High">High Priority</option>
+            </select>
+          </div>
+        </div>
+
+        <form id="taskForm" class="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+          <input id="taskTitle" type="text" required placeholder="Task title (e.g., Finish Physics problem set)" class="sm:col-span-4 px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          <select id="taskCategory" class="sm:col-span-2 px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="Study">Study</option>
+            <option value="Project">Project</option>
+            <option value="Personal">Personal</option>
+          </select>
+          <select id="taskPriority" class="sm:col-span-2 px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="High">High Priority</option>
+            <option value="Medium" selected>Medium Priority</option>
+            <option value="Low">Low Priority</option>
+          </select>
+          <select id="taskType" class="sm:col-span-2 px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="one-off" selected>One-off</option>
+            <option value="recurring">Daily recurring</option>
+          </select>
+          <input id="taskDueDate" type="date" class="sm:col-span-2 px-2 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          <input id="taskDue" type="time" value="17:00" class="sm:col-span-2 px-2 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          <button type="submit" class="sm:col-span-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm px-4 py-2 rounded-lg transition">
+            + Add Task
+          </button>
+        </form>
+      </div>
+
+      <div id="taskList" class="space-y-2.5"></div>
+    </section>
+
+    <!-- SECTION 4: CLASS & WORK NOTES -->
+    <section id="section-notes" class="hidden space-y-4">
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+          <div>
+            <h2 class="text-base font-bold text-slate-900">Quick Class &amp; Work Notes</h2>
+            <p class="text-xs text-slate-500">Capture key takeaways, formulas, or action items organized by subject tag.</p>
+          </div>
+          <input id="noteSearch" type="text" placeholder="Search notes..." class="text-xs px-3 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+
+        <form id="noteForm" class="space-y-2.5">
+          <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+            <input id="noteTitle" type="text" required placeholder="Note title (e.g., Key JavaScript Array Methods)" class="sm:col-span-8 px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            <input id="noteTag" type="text" required placeholder="Tag (e.g., CS101, Work)" class="sm:col-span-4 px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+          <textarea id="noteContent" rows="3" required placeholder="Write your structured note here..." class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+          <div class="flex justify-end">
+            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm px-4 py-2 rounded-lg transition">
+              + Save Note
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div id="noteList" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+    </section>
+
+    <!-- SECTION 5: DAILY JOURNAL -->
+    <section id="section-journal" class="hidden space-y-4">
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <h2 class="text-base font-bold text-slate-900">Daily Reflection Journal</h2>
+        <p class="text-xs text-slate-500 mb-3">Record wins, lessons learned, and your energy level as you build momentum.</p>
+        <form id="journalForm" class="space-y-2.5">
+          <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+            <input id="journalHeadline" type="text" required placeholder="Highlight of the day..." class="sm:col-span-8 px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            <select id="journalMood" class="sm:col-span-4 px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="🚀 Focused &amp; Energized">🚀 Focused &amp; Energized</option>
+              <option value="😊 Steady Progress">😊 Steady Progress</option>
+              <option value="🧘 Calm &amp; Reflective">🧘 Calm &amp; Reflective</option>
+              <option value="⚡ Pushing Through">⚡ Pushing Through</option>
+            </select>
+          </div>
+          <textarea id="journalBody" rows="3" required placeholder="What went well today? What is your #1 focus for tomorrow?" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+          <div class="flex justify-end">
+            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm px-4 py-2 rounded-lg transition">
+              + Log Journal Entry
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div id="journalList" class="space-y-3"></div>
+    </section>
+
+    <!-- SECTION 6: CODE SAMPLES & ANALYTICS -->
+    <section id="section-devenv" class="hidden space-y-4">
+      <!-- 7-Day Continuous Progress Analytics Card -->
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div>
+            <h2 class="text-base font-bold text-slate-900">Workspace Progress &amp; 7-Day Trend</h2>
+            <p class="text-xs text-slate-500">Daily snapshots saved in this browser. Past days without recorded data are shown as unavailable.</p>
+          </div>
+          <span id="focusSessionsBadge" class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">
+            0 Focus Sessions Logged Today
+          </span>
+        </div>
+        <div id="weeklyChartContainer" class="grid grid-cols-7 gap-2 items-end h-32 pt-4 px-2 bg-slate-50 rounded-lg border border-slate-200"></div>
+      </div>
+
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <h2 class="text-sm font-bold text-slate-900">Server Sync</h2>
+        <p class="text-xs text-slate-500 mt-1">Only needed when the server is configured with an access token. The token stays in this browser tab.</p>
+        <form id="serverTokenForm" class="flex flex-wrap gap-2 mt-3">
+          <input id="serverTokenInput" type="password" autocomplete="off" placeholder="Server API token (optional)" class="flex-1 min-w-48 px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm px-4 py-2 rounded-lg transition">Connect</button>
+        </form>
+      </div>
+
+      <!-- Code Sample Viewer -->
+      <div class="bg-slate-900 text-slate-100 rounded-xl border border-slate-800 shadow-lg overflow-hidden">
+        <div class="px-4 py-3 bg-slate-950 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+            <span class="text-xs font-semibold text-slate-300 ml-2 code-font">DailyFlow — Code Sample Viewer</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="runBuildCheckBtn" type="button" class="text-xs px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-medium transition">
+              ▶ Run Data &amp; Server Check
+            </button>
+            <button id="inspectLiveStateBtn" type="button" class="text-xs px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition">
+              🔍 Inspect Live State JSON
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-12">
+          <!-- Sidebar File Tree -->
+          <div class="md:col-span-3 border-b md:border-b-0 md:border-r border-slate-800 p-3 space-y-1 bg-slate-900/60">
+            <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2">Project Files</p>
+            <button type="button" data-file="package.json" class="dev-file-btn w-full text-left text-xs code-font px-2.5 py-1.5 rounded bg-indigo-600/30 text-indigo-300 font-medium">
+              📦 package.json
+            </button>
+            <button type="button" data-file="server.js" class="dev-file-btn w-full text-left text-xs code-font px-2.5 py-1.5 rounded hover:bg-slate-800 text-slate-300">
+              🟢 server/server.js
+            </button>
+            <button type="button" data-file="schema.sql" class="dev-file-btn w-full text-left text-xs code-font px-2.5 py-1.5 rounded hover:bg-slate-800 text-slate-300">
+              🗄️ db/schema.sql
+            </button>
+            <button type="button" data-file="store.js" class="dev-file-btn w-full text-left text-xs code-font px-2.5 py-1.5 rounded hover:bg-slate-800 text-slate-300">
+              ⚡ src/store.js
+            </button>
+            <button type="button" data-file="README.md" class="dev-file-btn w-full text-left text-xs code-font px-2.5 py-1.5 rounded hover:bg-slate-800 text-slate-300">
+              📘 README.md
+            </button>
+          </div>
+
+          <!-- Code Viewer & Terminal Output -->
+          <div class="md:col-span-9 flex flex-col">
+            <div class="px-4 py-2 bg-slate-900 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400">
+              <span id="activeFileName" class="code-font font-semibold text-indigo-400">package.json</span>
+              <span id="activeFileRole">Node.js dependencies &amp; scripts</span>
+            </div>
+            <pre id="codeInspectorView" class="p-4 text-xs code-font text-slate-200 overflow-x-auto max-h-72 leading-relaxed"></pre>
+            <div class="border-t border-slate-800 bg-slate-950 p-3">
+              <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Demo Output</div>
+            <pre id="terminalOutput" class="text-xs code-font text-emerald-400 whitespace-pre-wrap">[DailyFlow] Browser storage is active. Changes sync to SQLite when the local server is running.</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Application Logic (JavaScript) -->
+  <script>
+    const STORAGE_KEY = 'dailyflow_v1_state';
+
+    const DEV_FILES = {
+      'package.json': {
+        role: 'Example Node.js package configuration',
+        code: `{
+  "name": "dailyflow-app",
+  "version": "1.0.0",
+  "description": "DailyFlow planner with SQLite sync",
+  "engines": { "node": ">=24.15.0" },
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "node --watch server/server.js",
+    "build:css": "tailwindcss -i ./src/input.css -o ./public/app.css --minify",
+    "test": "playwright test"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "tailwindcss": "3.4.17"
+  }
+}`
+      },
+      'server.js': {
+        role: 'API overview; runnable code is in server/server.js',
+        code: `// DailyFlow API overview
+// GET /api/state loads the persisted workspace from SQLite.
+// PUT /api/state validates the five collections and saves one transaction.
+// The browser debounces writes and falls back to localStorage offline.
+// Start the API with npm start; default binding is localhost only.
+
+const { DatabaseSync } = require('node:sqlite');
+const database = new DatabaseSync('data/dailyflow.sqlite');
+app.get('/api/state', getPersistedWorkspace);
+app.put('/api/state', validateAndSaveWorkspace);`
+      },
+      'schema.sql': {
+        role: 'SQLite persistence schema used by the server',
+        code: `CREATE TABLE IF NOT EXISTS workspace_state (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  state_json TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);`
+      },
+      'store.js': {
+        role: 'Central State Manager & Continuous Progress Calculation Engine',
+        code: `function calculateContinuousProgress(state) {
+  const routineDone = state.routines.filter(r => r.done).length;
+  const classDone = state.classes.filter(c => c.attended).length;
+  const taskUnits = state.tasks.reduce((sum, t) => {
+    const progress = Math.min(100, Math.max(0, Number(t.progress) || 0));
+    return sum + (t.completed ? 1 : progress / 100);
+  }, 0);
+  const total = state.routines.length + state.classes.length + state.tasks.length;
+  return total > 0 ? Math.round(((routineDone + classDone + taskUnits) / total) * 100) : 0;
+}
+
+module.exports = { calculateContinuousProgress };`
+      },
+      'README.md': {
+        role: 'Project setup and sync behavior',
+        code: `# DailyFlow
+
+Run npm install, npm run build:css, then npm start.
+Open http://127.0.0.1:3000. State is saved in SQLite and mirrored
+to browser storage for offline use.
+
+Routine/class checks and focus counts reset each day.
+One-off task progress persists; daily recurring tasks reset.
+Notifications are delivered while the page is open.
+
+For remote use, configure a 32-character API token and HTTPS. The token grants
+access to the one shared workspace; the app has no separate user accounts.`
+      }
+    };
+
+    function getLocalDateKey(date = new Date()) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function isValidDateKey(value) {
+      if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+      const [year, month, day] = value.split('-').map(Number);
+      return getLocalDateKey(new Date(year, month - 1, day, 12)) === value;
+    }
+
+    function makeId(prefix) {
+      const uniquePart = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      return `${prefix}${uniquePart}`;
+    }
+
+    function getInitialSampleState() {
+      return {
+        activeTab: 'routine',
+        taskFilter: 'all',
+        noteSearch: '',
+        schemaVersion: 2,
+        currentDay: getLocalDateKey(),
+        progressHistory: {},
+        scheduleHistory: {},
+        focusSessions: 0,
+        routines: [
+          { id: 'r1', time: '07:30', title: 'Morning hydration & 10-min plan review', block: 'Morning', done: true },
+          { id: 'r2', time: '13:00', title: 'Midday stretch & lunch break away from screen', block: 'Afternoon', done: false },
+          { id: 'r3', time: '21:30', title: 'Pack bag for tomorrow & evening wind-down', block: 'Evening', done: false }
+        ],
+        classes: [
+          { id: 'c1', time: '09:30', subject: 'Web Development 101', topic: 'Room 302 — HTML, CSS & DOM Basics', attended: true },
+          { id: 'c2', time: '14:00', subject: 'Data Structures', topic: 'Lab B — Arrays & Objects Practice', attended: false }
+        ],
+        tasks: [
+          { id: 't1', title: 'Build Version 1 of Daily Reminder App', category: 'Project', priority: 'High', type: 'one-off', dueDate: getLocalDateKey(), due: '18:00', progress: 60, completed: false },
+          { id: 't2', title: 'Review lecture slides for Web Development 101', category: 'Study', priority: 'Medium', type: 'one-off', dueDate: getLocalDateKey(), due: '20:00', progress: 100, completed: true },
+          { id: 't3', title: 'Organize weekly study goals', category: 'Personal', priority: 'Low', type: 'one-off', dueDate: getLocalDateKey(), due: '21:00', progress: 30, completed: false }
+        ],
+        notes: [
+          { id: 'n1', title: 'How a Web App Works', tag: 'Web Dev 101', content: 'HTML builds the skeleton, CSS styles the colors and layout, and JavaScript updates the screen and saves data to localStorage.', date: 'Today' },
+          { id: 'n2', title: 'Project Milestone Checklist', tag: 'Project', content: 'Step 1: Core routine, classes, tasks, notes, and journal with live progress bar. Step 2: Add a real backend and sync only when needed.', date: 'Today' }
+        ],
+        journal: [
+          { id: 'j1', headline: 'Started building my own custom DailyFlow app!', mood: '🚀 Focused & Energized', body: 'Seeing all my routines, classes, tasks, and notes connected to one live progress bar makes it much easier to stay on track.', timestamp: 'Today, 09:00 AM' }
+        ]
+      };
+    }
+
+    function calculateProgress(data) {
+      const routines = Array.isArray(data?.routines) ? data.routines : [];
+      const classes = Array.isArray(data?.classes) ? data.classes : [];
+      const tasks = Array.isArray(data?.tasks) ? data.tasks : [];
+      const total = routines.length + classes.length + tasks.length;
+      if (!total) return 0;
+      const earned = routines.filter(item => item.done).length +
+        classes.filter(item => item.attended).length +
+        tasks.reduce((sum, task) => sum + (task.completed ? 1 : Math.min(100, Math.max(0, Number(task.progress) || 0)) / 100), 0);
+      return Math.round((earned / total) * 100);
+    }
+
+    function isDailyScheduleComplete(data) {
+      const routines = Array.isArray(data?.routines) ? data.routines : [];
+      const classes = Array.isArray(data?.classes) ? data.classes : [];
+      return routines.length + classes.length > 0 && routines.every(item => item.done) && classes.every(item => item.attended);
+    }
+
+    function rollStateToDay(target, today) {
+      if (target.currentDay === today) return false;
+      target.progressHistory = target.progressHistory || {};
+      target.progressHistory[target.currentDay] = calculateProgress(target);
+      target.scheduleHistory = target.scheduleHistory || {};
+      target.scheduleHistory[target.currentDay] = isDailyScheduleComplete(target);
+      target.routines = target.routines.map(item => ({ ...item, done: false }));
+      target.classes = target.classes.map(item => ({ ...item, attended: false }));
+      target.tasks = target.tasks.map(item => item.type === 'recurring' ? { ...item, progress: 0, completed: false } : item);
+      target.focusSessions = 0;
+      target.currentDay = today;
+      return true;
+    }
+
+    function normalizeState(parsed) {
+      const initial = getInitialSampleState();
+      const source = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+      const asText = (value, fallback = '') => typeof value === 'string' ? value : fallback;
+      const asArray = value => Array.isArray(value) ? value : [];
+      const seenIds = new Set();
+      const asId = (value, prefix) => {
+        let id = typeof value === 'string' && value ? value : makeId(prefix);
+        if (seenIds.has(id)) id = makeId(prefix);
+        seenIds.add(id);
+        return id;
+      };
+      const asTime = (value, fallback = '') => /^([01]\d|2[0-3]):[0-5]\d$/.test(value || '') ? value : fallback;
+      const normalized = { ...initial, ...source };
+
+      normalized.routines = asArray(source.routines).filter(item => item && typeof item === 'object').map(item => ({
+        id: asId(item.id, 'r'), time: asTime(item.time, '08:00'), title: asText(item.title),
+        block: ['Morning', 'Afternoon', 'Evening'].includes(item.block) ? item.block : 'Morning', done: Boolean(item.done)
+      }));
+      normalized.classes = asArray(source.classes).filter(item => item && typeof item === 'object').map(item => ({
+        id: asId(item.id, 'c'), time: asTime(item.time, '10:00'), subject: asText(item.subject),
+        topic: asText(item.topic), attended: Boolean(item.attended)
+      }));
+      normalized.tasks = asArray(source.tasks).filter(item => item && typeof item === 'object').map(item => {
+        const progress = Math.min(100, Math.max(0, Number(item.progress) || 0));
+        const completed = Boolean(item.completed) || progress === 100;
+        return {
+          id: asId(item.id, 't'), title: asText(item.title),
+          category: ['Study', 'Project', 'Personal'].includes(item.category) ? item.category : 'Personal',
+          priority: ['High', 'Medium', 'Low'].includes(item.priority) ? item.priority : 'Medium',
+          type: item.type === 'recurring' ? 'recurring' : 'one-off',
+          dueDate: isValidDateKey(item.dueDate) ? item.dueDate : getLocalDateKey(),
+          due: asTime(item.due), progress: completed ? 100 : progress, completed
+        };
+      });
+      normalized.notes = asArray(source.notes).filter(item => item && typeof item === 'object').map(item => ({
+        id: asId(item.id, 'n'), title: asText(item.title), tag: asText(item.tag), content: asText(item.content), date: asText(item.date)
+      }));
+      normalized.journal = asArray(source.journal).filter(item => item && typeof item === 'object').map(item => ({
+        id: asId(item.id, 'j'), headline: asText(item.headline), mood: asText(item.mood), body: asText(item.body), timestamp: asText(item.timestamp)
+      }));
+      normalized.activeTab = ['routine', 'classes', 'tasks', 'notes', 'journal', 'devenv'].includes(source.activeTab) ? source.activeTab : 'routine';
+      normalized.taskFilter = ['all', 'pending', 'completed', 'High'].includes(source.taskFilter) ? source.taskFilter : 'all';
+      normalized.noteSearch = asText(source.noteSearch);
+      normalized.updatedAt = typeof source.updatedAt === 'string' && !Number.isNaN(Date.parse(source.updatedAt)) ? source.updatedAt : '';
+      normalized.schemaVersion = 2;
+      normalized.focusSessions = Math.max(0, Math.floor(Number(source.focusSessions) || 0));
+      normalized.currentDay = isValidDateKey(source.currentDay) ? source.currentDay : getLocalDateKey();
+      const history = source.progressHistory && typeof source.progressHistory === 'object' && !Array.isArray(source.progressHistory) ? source.progressHistory : {};
+      normalized.progressHistory = Object.fromEntries(Object.entries(history)
+        .filter(([key, value]) => isValidDateKey(key) && Number.isFinite(Number(value)))
+        .map(([key, value]) => [key, Math.min(100, Math.max(0, Number(value)))]));
+      const scheduleHistory = source.scheduleHistory && typeof source.scheduleHistory === 'object' && !Array.isArray(source.scheduleHistory) ? source.scheduleHistory : {};
+      normalized.scheduleHistory = Object.fromEntries(Object.entries(scheduleHistory)
+        .filter(([key, value]) => isValidDateKey(key) && typeof value === 'boolean'));
+
+      rollStateToDay(normalized, getLocalDateKey());
+      return normalized;
+    }
+
+    let hasPersistedLocalState = false;
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            hasPersistedLocalState = true;
+            return normalizeState(parsed);
+          }
+        }
+      } catch (e) {
+        // Use sample data when storage is blocked or contains invalid JSON.
+      }
+      return getInitialSampleState();
+    }
+
+    let state = loadState();
+    let currentPercent = 0;
+    let serverSyncReady = false;
+    let serverSyncTimer = null;
+    let stateDirty = false;
+
+    function getServerHeaders(json = false) {
+      const headers = json ? { 'Content-Type': 'application/json' } : {};
+      try {
+        const token = sessionStorage.getItem('dailyflow_api_token');
+        if (token) headers.Authorization = `Bearer ${token}`;
+      } catch (error) {}
+      return headers;
+    }
+
+    function markStateChanged() {
+      stateDirty = true;
+      state.updatedAt = new Date().toISOString();
+    }
+
+    function queueServerSync() {
+      if (!serverSyncReady) return;
+      window.clearTimeout(serverSyncTimer);
+      serverSyncTimer = window.setTimeout(async () => {
+        const sentState = { ...state, updatedAt: new Date().toISOString() };
+        state.updatedAt = sentState.updatedAt;
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+        try {
+          const response = await fetch('/api/state', {
+            method: 'PUT',
+            headers: getServerHeaders(true),
+            body: JSON.stringify({ state: sentState })
+          });
+          if (!response.ok) throw new Error(`Server returned ${response.status}`);
+          const result = await response.json();
+          if (state.updatedAt === sentState.updatedAt) {
+            state.updatedAt = result.updatedAt || sentState.updatedAt;
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+          }
+          document.getElementById('storageStatus').textContent = 'Saved in this browser and synced to the server';
+        } catch (error) {
+          serverSyncReady = false;
+          stateDirty = true;
+          document.getElementById('storageStatus').textContent = 'Server unavailable; changes remain saved in this browser and will sync when reconnected.';
+        }
+      }, 400);
+    }
+
+    function mergeCollections(remoteItems, localItems) {
+      const merged = new Map();
+      [...(Array.isArray(remoteItems) ? remoteItems : []), ...(Array.isArray(localItems) ? localItems : [])]
+        .forEach(item => merged.set(item.id, item));
+      return [...merged.values()];
+    }
+
+    async function connectServerSync() {
+      try {
+        const response = await fetch('/api/state', { cache: 'no-store', headers: getServerHeaders() });
+        if (response.status === 401) throw new Error('Server requires a valid access token.');
+        if (!response.ok) throw new Error(`Server returned ${response.status}`);
+        const remote = await response.json();
+        serverSyncReady = true;
+
+        if (stateDirty && remote.data) {
+          const local = state;
+          state = normalizeState({
+            ...remote.data,
+            ...local,
+            routines: mergeCollections(remote.data.routines, local.routines),
+            classes: mergeCollections(remote.data.classes, local.classes),
+            tasks: mergeCollections(remote.data.tasks, local.tasks),
+            notes: mergeCollections(remote.data.notes, local.notes),
+            journal: mergeCollections(remote.data.journal, local.journal),
+            progressHistory: { ...(remote.data.progressHistory || {}), ...(local.progressHistory || {}) },
+            scheduleHistory: { ...(remote.data.scheduleHistory || {}), ...(local.scheduleHistory || {}) }
+          });
+          markStateChanged();
+          renderAll();
+          return;
+        }
+        if (stateDirty) {
+          queueServerSync();
+          return;
+        }
+        if (!remote.data) {
+          stateDirty = true;
+          queueServerSync();
+          stateDirty = false;
+          return;
+        }
+
+        const localTime = Date.parse(state.updatedAt || '') || 0;
+        const remoteTime = Date.parse(remote.updatedAt || remote.data.updatedAt || '') || 0;
+        if (hasPersistedLocalState && !state.updatedAt) {
+          const local = state;
+          state = normalizeState({
+            ...remote.data,
+            ...local,
+            routines: mergeCollections(remote.data.routines, local.routines),
+            classes: mergeCollections(remote.data.classes, local.classes),
+            tasks: mergeCollections(remote.data.tasks, local.tasks),
+            notes: mergeCollections(remote.data.notes, local.notes),
+            journal: mergeCollections(remote.data.journal, local.journal),
+            progressHistory: { ...(remote.data.progressHistory || {}), ...(local.progressHistory || {}) },
+            scheduleHistory: { ...(remote.data.scheduleHistory || {}), ...(local.scheduleHistory || {}) }
+          });
+          markStateChanged();
+          renderAll();
+          return;
+        }
+        if (localTime > remoteTime) {
+          stateDirty = true;
+          queueServerSync();
+          stateDirty = false;
+          return;
+        }
+
+        const previousDay = remote.data.currentDay;
+        state = normalizeState(remote.data);
+        state.updatedAt = remote.updatedAt || remote.data.updatedAt || '';
+        if (previousDay && state.currentDay !== previousDay) markStateChanged();
+        hasPersistedLocalState = true;
+        renderAll();
+        document.getElementById('storageStatus').textContent = 'Connected to the server; changes sync across devices';
+      } catch (error) {
+        serverSyncReady = false;
+        document.getElementById('storageStatus').textContent = error.message.includes('token')
+          ? 'Server requires a token. Enter it in Server Sync to enable synchronization.'
+          : 'Server not connected; this page is using browser storage.';
+      }
+    }
+
+    async function pollServerState() {
+      if (stateDirty) return;
+      try {
+        const response = await fetch('/api/state', { cache: 'no-store', headers: getServerHeaders() });
+        if (!response.ok) throw new Error(`Server returned ${response.status}`);
+        const remote = await response.json();
+        const remoteTime = Date.parse(remote.updatedAt || '') || 0;
+        const localTime = Date.parse(state.updatedAt || '') || 0;
+        if (!remote.data || remoteTime <= localTime) return;
+
+        const localView = { activeTab: state.activeTab, taskFilter: state.taskFilter, noteSearch: state.noteSearch };
+        const previousDay = remote.data.currentDay;
+        state = normalizeState(remote.data);
+        state.updatedAt = remote.updatedAt || remote.data.updatedAt || '';
+        state.activeTab = localView.activeTab;
+        state.taskFilter = localView.taskFilter;
+        state.noteSearch = localView.noteSearch;
+        hasPersistedLocalState = true;
+        if (previousDay && state.currentDay !== previousDay) markStateChanged();
+        renderAll();
+        document.getElementById('storageStatus').textContent = 'Updated from the shared server';
+      } catch (error) {
+        serverSyncReady = false;
+        document.getElementById('storageStatus').textContent = 'Server unavailable; the local copy is still usable.';
+      }
+    }
+
+    function updateCurrentDateDisplay() {
+      document.getElementById('currentDateDisplay').textContent = new Date().toLocaleDateString('en-US', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+      });
+    }
+
+    function rolloverStateIfNeeded() {
+      const changed = rollStateToDay(state, getLocalDateKey());
+      if (changed) {
+        currentPercent = calculateProgress(state);
+        markStateChanged();
+        updateCurrentDateDisplay();
+      }
+      return changed;
+    }
+
+    function saveState() {
+      try {
+        rolloverStateIfNeeded();
+        state.currentDay = getLocalDateKey();
+        state.progressHistory = state.progressHistory || {};
+        state.progressHistory[state.currentDay] = currentPercent;
+        state.scheduleHistory = state.scheduleHistory || {};
+        state.scheduleHistory[state.currentDay] = isDailyScheduleComplete(state);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        document.getElementById('storageStatus').textContent = 'Saved in this browser';
+      } catch (e) {
+        document.getElementById('storageStatus').textContent = 'Browser storage is unavailable; changes will be lost when this page closes.';
+      }
+      if (stateDirty && serverSyncReady) {
+        stateDirty = false;
+        queueServerSync();
+      }
+    }
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function formatDateLabel(value) {
+      const parsed = new Date(value);
+      return value && !Number.isNaN(parsed.getTime())
+        ? parsed.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+        : String(value || '');
+    }
+
+    function updateContinuousProgress() {
+      const routineTotal = state.routines.length;
+      const routineDone = state.routines.filter(r => r.done).length;
+
+      const classTotal = state.classes.length;
+      const classDone = state.classes.filter(c => c.attended).length;
+
+      const taskTotal = state.tasks.length;
+      const taskDone = state.tasks.filter(t => t.completed).length;
+
+      // Tasks also contribute partial progress via their slider!
+      const totalTrackable = routineTotal + classTotal + taskTotal;
+      const percent = calculateProgress(state);
+      currentPercent = percent;
+
+      document.getElementById('overallProgressBar').style.width = percent + '%';
+      document.getElementById('overallProgressBar').setAttribute('aria-valuenow', String(percent));
+      document.getElementById('overallProgressText').textContent = `${percent}% Work Progress (${routineDone + classDone + taskDone}/${totalTrackable} fully done)`;
+
+      const badge = document.getElementById('progressStatusBadge');
+      if (percent >= 100 && totalTrackable > 0) {
+        badge.textContent = '🎉 All Daily Goals Complete!';
+        badge.className = 'text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800';
+      } else if (percent >= 50) {
+        badge.textContent = '🔥 Strong Momentum';
+        badge.className = 'text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700';
+      } else {
+        badge.textContent = '🌱 Building Momentum';
+        badge.className = 'text-xs font-medium px-2 py-0.5 rounded-full bg-slate-200 text-slate-700';
+      }
+
+      document.getElementById('statRoutine').textContent = `${routineDone}/${routineTotal}`;
+      document.getElementById('statClasses').textContent = `${classDone}/${classTotal}`;
+      document.getElementById('statTasks').textContent = `${taskDone}/${taskTotal}`;
+      document.getElementById('statEntries').textContent = `${state.notes.length + state.journal.length} saved`;
+      document.getElementById('focusSessionsBadge').textContent = `${state.focusSessions || 0} Focus Sessions Logged Today`;
+      document.getElementById('streakBadge').textContent = `🔥 ${calculateStreakDays()}-Day Streak`;
+    }
+
+    function calculateStreakDays() {
+      const history = state.scheduleHistory || {};
+      let cursor = new Date();
+      cursor.setHours(12, 0, 0, 0);
+      if (!isDailyScheduleComplete(state)) cursor.setDate(cursor.getDate() - 1);
+      let streak = 0;
+      while ((getLocalDateKey(cursor) === getLocalDateKey() ? isDailyScheduleComplete(state) : history[getLocalDateKey(cursor)]) === true) {
+        streak++;
+        cursor.setDate(cursor.getDate() - 1);
+      }
+      return streak;
+    }
+
+    function renderWeeklyChart() {
+      const container = document.getElementById('weeklyChartContainer');
+      if (!container) return;
+      const today = new Date();
+      today.setHours(12, 0, 0, 0);
+      const days = Array.from({ length: 7 }, (_, index) => {
+        const date = new Date(today);
+        date.setDate(today.getDate() - (6 - index));
+        const key = getLocalDateKey(date);
+        return {
+          key,
+          label: date.toLocaleDateString(undefined, { weekday: 'short' }),
+          value: key === getLocalDateKey() ? currentPercent : state.progressHistory[key],
+          active: key === getLocalDateKey()
+        };
+      });
+      container.innerHTML = days.map(day => `
+        <div class="flex flex-col items-center justify-end h-full gap-1">
+          <span class="text-[10px] font-bold ${day.active ? 'text-indigo-600' : 'text-slate-500'}">${day.value == null ? '—' : `${day.value}%`}</span>
+          <div title="${day.key}: ${day.value == null ? 'No saved data' : `${day.value}%`}" class="w-full max-w-[36px] rounded-t-md transition-all duration-300 ${day.active ? 'bg-indigo-600' : 'bg-indigo-200'}" style="height: ${day.value == null ? 4 : Math.max(4, Math.round(day.value * 0.75))}px"></div>
+          <span class="text-[11px] font-medium ${day.active ? 'text-indigo-700 font-bold' : 'text-slate-500'}">${day.active ? 'Today' : day.label}</span>
+        </div>
+      `).join('');
+    }
+
+    function renderRoutines() {
+      const container = document.getElementById('routineList');
+      if (state.routines.length === 0) {
+        container.innerHTML = `<div class="bg-white p-6 rounded-xl border border-slate-200 text-center text-sm text-slate-500">No routine items yet. Add your first daily block above!</div>`;
+        return;
+      }
+
+      const sorted = [...state.routines].sort((a, b) => a.time.localeCompare(b.time));
+      container.innerHTML = sorted.map(item => `
+        <div class="bg-white p-3.5 rounded-xl border ${item.done ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200'} flex items-center justify-between gap-3 shadow-sm">
+          <div class="flex items-center gap-3">
+            <input type="checkbox" aria-label="Mark ${escapeHtml(item.title)} complete" data-action="toggle-routine" data-id="${escapeHtml(item.id)}" ${item.done ? 'checked' : ''} class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">${escapeHtml(item.time)}</span>
+                <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700">${escapeHtml(item.block)}</span>
+              </div>
+              <p class="text-sm font-medium mt-1 ${item.done ? 'line-through text-slate-400' : 'text-slate-800'}">${escapeHtml(item.title)}</p>
+            </div>
+          </div>
+          <button type="button" data-action="delete-routine" data-id="${escapeHtml(item.id)}" class="text-xs text-slate-400 hover:text-rose-600 px-2 py-1">Remove</button>
+        </div>
+      `).join('');
+    }
+
+    function renderClasses() {
+      const container = document.getElementById('classList');
+      if (state.classes.length === 0) {
+        container.innerHTML = `<div class="bg-white p-6 rounded-xl border border-slate-200 text-center text-sm text-slate-500">No classes logged yet. Add a class session above!</div>`;
+        return;
+      }
+
+      const sorted = [...state.classes].sort((a, b) => a.time.localeCompare(b.time));
+      container.innerHTML = sorted.map(cls => `
+        <div class="bg-white p-3.5 rounded-xl border ${cls.attended ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200'} flex items-center justify-between gap-3 shadow-sm">
+          <div class="flex items-center gap-3">
+            <input type="checkbox" aria-label="Mark ${escapeHtml(cls.subject)} attended" data-action="toggle-class" data-id="${escapeHtml(cls.id)}" ${cls.attended ? 'checked' : ''} class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-700">${escapeHtml(cls.time)}</span>
+                <h3 class="text-sm font-bold ${cls.attended ? 'line-through text-slate-400' : 'text-slate-900'}">${escapeHtml(cls.subject)}</h3>
+              </div>
+              <p class="text-xs text-slate-500 mt-0.5">${escapeHtml(cls.topic)}</p>
+            </div>
+          </div>
+          <button type="button" data-action="delete-class" data-id="${escapeHtml(cls.id)}" class="text-xs text-slate-400 hover:text-rose-600 px-2 py-1">Remove</button>
+        </div>
+      `).join('');
+    }
+
+    function renderTasks() {
+      const container = document.getElementById('taskList');
+      const filtered = state.tasks.filter(t => {
+        if (state.taskFilter === 'pending') return !t.completed;
+        if (state.taskFilter === 'completed') return t.completed;
+        if (state.taskFilter === 'High') return t.priority === 'High';
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="bg-white p-6 rounded-xl border border-slate-200 text-center text-sm text-slate-500">No matching tasks in this filter view.</div>`;
+        return;
+      }
+
+      const priorityColors = {
+        High: 'bg-rose-50 text-rose-700 border-rose-200',
+        Medium: 'bg-amber-50 text-amber-700 border-amber-200',
+        Low: 'bg-emerald-50 text-emerald-700 border-emerald-200'
+      };
+
+      container.innerHTML = filtered.map(task => `
+        <div data-task-card class="bg-white p-4 rounded-xl border ${task.completed ? 'border-emerald-200 bg-emerald-50/20' : 'border-slate-200'} shadow-sm space-y-2.5">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex items-start gap-3">
+                  <input type="checkbox" aria-label="Mark ${escapeHtml(task.title)} complete" data-action="toggle-task" data-id="${escapeHtml(task.id)}" ${task.completed ? 'checked' : ''} class="mt-1 w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+              <div>
+                <div class="flex flex-wrap items-center gap-1.5">
+                  <span class="text-xs font-semibold px-2 py-0.5 rounded-full border ${priorityColors[task.priority] || priorityColors.Medium}">${escapeHtml(task.priority)}</span>
+                  <span class="text-xs font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-600">${escapeHtml(task.category)}</span>
+                  <span class="text-xs text-slate-500">${task.type === 'recurring' ? 'Daily recurring' : 'One-off'}</span>
+                  <span class="text-xs text-slate-400">Due ${task.type === 'recurring' ? 'daily' : escapeHtml(task.dueDate || 'date not set')}${task.due ? ` at ${escapeHtml(task.due)}` : ''}</span>
+                </div>
+                <p data-task-title class="text-sm font-semibold mt-1 ${task.completed ? 'line-through text-slate-400' : 'text-slate-900'}">${escapeHtml(task.title)}</p>
+              </div>
+            </div>
+             <button type="button" data-action="delete-task" data-id="${escapeHtml(task.id)}" class="text-xs text-slate-400 hover:text-rose-600 px-2 py-1">Remove</button>
+          </div>
+
+          <!-- Continuous Work Progress Slider per Task -->
+          <div class="flex items-center gap-3 pt-1">
+            <span class="text-xs text-slate-500 w-24">Work Progress:</span>
+            <input type="range" min="0" max="100" step="1" value="${task.completed ? 100 : task.progress}" aria-label="Progress for ${escapeHtml(task.title)}" data-action="slide-task" data-id="${escapeHtml(task.id)}" class="flex-1 accent-indigo-600 cursor-pointer" />
+            <span data-task-progress class="text-xs font-bold text-indigo-600 w-10 text-right">${task.completed ? 100 : task.progress}%</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderNotes() {
+      const container = document.getElementById('noteList');
+      const query = (state.noteSearch || '').toLowerCase();
+      const filtered = state.notes.filter(n =>
+        n.title.toLowerCase().includes(query) ||
+        n.tag.toLowerCase().includes(query) ||
+        n.content.toLowerCase().includes(query)
+      );
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="col-span-2 bg-white p-6 rounded-xl border border-slate-200 text-center text-sm text-slate-500">No notes found. Capture a class or work note above!</div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(note => `
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700">${escapeHtml(note.tag)}</span>
+              <span class="text-xs text-slate-400">${escapeHtml(formatDateLabel(note.date))}</span>
+            </div>
+            <h3 class="text-sm font-bold text-slate-900 mt-2">${escapeHtml(note.title)}</h3>
+            <p class="text-xs text-slate-600 mt-1.5 whitespace-pre-line leading-relaxed">${escapeHtml(note.content)}</p>
+          </div>
+          <div class="mt-3 pt-2 border-t border-slate-100 flex justify-end">
+              <button type="button" data-action="delete-note" data-id="${escapeHtml(note.id)}" class="text-xs text-slate-400 hover:text-rose-600">Delete Note</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderJournal() {
+      const container = document.getElementById('journalList');
+      if (state.journal.length === 0) {
+        container.innerHTML = `<div class="bg-white p-6 rounded-xl border border-slate-200 text-center text-sm text-slate-500">No journal reflections yet. Log your first entry above!</div>`;
+        return;
+      }
+
+      container.innerHTML = state.journal.map(entry => `
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">${escapeHtml(entry.mood)}</span>
+              <h3 class="text-sm font-bold text-slate-900">${escapeHtml(entry.headline)}</h3>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-400">${escapeHtml(formatDateLabel(entry.timestamp))}</span>
+              <button type="button" data-action="delete-journal" data-id="${escapeHtml(entry.id)}" class="text-xs text-slate-400 hover:text-rose-600">Delete</button>
+            </div>
+          </div>
+          <p class="text-xs text-slate-600 mt-2 whitespace-pre-line leading-relaxed">${escapeHtml(entry.body)}</p>
+        </div>
+      `).join('');
+    }
+
+    function renderTabs() {
+      const tabs = ['routine', 'classes', 'tasks', 'notes', 'journal', 'devenv'];
+      tabs.forEach(tab => {
+        const sec = document.getElementById('section-' + tab);
+        if (sec) {
+          sec.classList.toggle('hidden', state.activeTab !== tab);
+          sec.setAttribute('role', 'tabpanel');
+          sec.setAttribute('aria-labelledby', 'tab-' + tab);
+          sec.tabIndex = 0;
+        }
+      });
+
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        const isCurrent = btn.getAttribute('data-tab') === state.activeTab;
+        const tab = btn.getAttribute('data-tab');
+        btn.id = 'tab-' + tab;
+        btn.setAttribute('aria-controls', 'section-' + tab);
+        btn.setAttribute('aria-selected', String(isCurrent));
+        btn.tabIndex = isCurrent ? 0 : -1;
+        btn.className = `tab-btn ${isCurrent ? 'tab-btn-active' : 'tab-btn-inactive'} text-xs sm:text-sm font-medium px-3.5 py-2 rounded-lg transition`;
+      });
+    }
+
+    function renderAll() {
+      rolloverStateIfNeeded();
+      renderTabs();
+      renderRoutines();
+      renderClasses();
+      renderTasks();
+      renderNotes();
+      renderJournal();
+      updateContinuousProgress();
+      renderWeeklyChart();
+      saveState();
+    }
+
+    // Initialize Date Display
+    updateCurrentDateDisplay();
+
+    const fieldLabels = {
+      routineTime: 'Routine time', routineTitle: 'Routine title', routineBlock: 'Routine part of day',
+      classTime: 'Class time', classSubject: 'Class subject', classTopic: 'Class topic or room',
+      taskTitle: 'Task title', taskCategory: 'Task category', taskPriority: 'Task priority', taskType: 'Task type', taskDueDate: 'One-off task due date', taskDue: 'Task due time',
+      taskFilter: 'Filter tasks', noteSearch: 'Search notes', noteTitle: 'Note title', noteTag: 'Note tag', noteContent: 'Note content',
+      journalHeadline: 'Journal headline', journalMood: 'Journal mood', journalBody: 'Journal entry'
+    };
+    Object.entries(fieldLabels).forEach(([id, label]) => document.getElementById(id).setAttribute('aria-label', label));
+    document.getElementById('serverTokenInput').setAttribute('aria-label', 'Server API token');
+    document.getElementById('serverTokenForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const token = document.getElementById('serverTokenInput').value.trim();
+      try {
+        if (token) sessionStorage.setItem('dailyflow_api_token', token);
+        else sessionStorage.removeItem('dailyflow_api_token');
+      } catch (error) {}
+      serverSyncReady = false;
+      connectServerSync();
+    });
+    document.getElementById('taskDueDate').value = getLocalDateKey();
+    document.getElementById('taskType').addEventListener('change', e => {
+      const dateInput = document.getElementById('taskDueDate');
+      const isRecurring = e.target.value === 'recurring';
+      dateInput.disabled = isRecurring;
+      if (isRecurring) dateInput.value = '';
+      if (!isRecurring && !dateInput.value) dateInput.value = getLocalDateKey();
+    });
+
+    // Tab Navigation Listeners
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.activeTab = btn.getAttribute('data-tab');
+        renderAll();
+      });
+    });
+
+    document.querySelector('nav[role="tablist"]').addEventListener('keydown', e => {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      e.preventDefault();
+      const tabs = [...document.querySelectorAll('.tab-btn')];
+      const currentIndex = tabs.indexOf(document.activeElement);
+      const direction = e.key === 'ArrowRight' ? 1 : -1;
+      const next = tabs[(currentIndex + direction + tabs.length) % tabs.length];
+      next.focus();
+      next.click();
+    });
+
+    // Add Routine
+    document.getElementById('routineForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const time = document.getElementById('routineTime').value;
+      const title = document.getElementById('routineTitle').value.trim();
+      const block = document.getElementById('routineBlock').value;
+      if (!title) return;
+      markStateChanged();
+      state.routines.push({ id: makeId('r'), time, title, block, done: false });
+      document.getElementById('routineTitle').value = '';
+      renderAll();
+    });
+
+    // Add Class
+    document.getElementById('classForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const time = document.getElementById('classTime').value;
+      const subject = document.getElementById('classSubject').value.trim();
+      const topic = document.getElementById('classTopic').value.trim();
+      if (!subject) return;
+      markStateChanged();
+      state.classes.push({ id: makeId('c'), time, subject, topic, attended: false });
+      document.getElementById('classSubject').value = '';
+      document.getElementById('classTopic').value = '';
+      renderAll();
+    });
+
+    // Add Task
+    document.getElementById('taskForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const title = document.getElementById('taskTitle').value.trim();
+      const category = document.getElementById('taskCategory').value;
+      const priority = document.getElementById('taskPriority').value;
+      const type = document.getElementById('taskType').value;
+      const dueDate = document.getElementById('taskDueDate').value;
+      const due = document.getElementById('taskDue').value;
+      if (!title) return;
+      markStateChanged();
+      state.tasks.push({ id: makeId('t'), title, category, priority, type, dueDate, due, progress: 0, completed: false });
+      document.getElementById('taskTitle').value = '';
+      renderAll();
+    });
+
+    // Filter Tasks
+    document.getElementById('taskFilter').addEventListener('change', e => {
+      state.taskFilter = e.target.value;
+      renderTasks();
+      saveState();
+    });
+
+    // Add Note
+    document.getElementById('noteForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const title = document.getElementById('noteTitle').value.trim();
+      const tag = document.getElementById('noteTag').value.trim();
+      const content = document.getElementById('noteContent').value.trim();
+      if (!title || !content) return;
+      markStateChanged();
+      state.notes.unshift({ id: makeId('n'), title, tag, content, date: new Date().toISOString() });
+      document.getElementById('noteTitle').value = '';
+      document.getElementById('noteTag').value = '';
+      document.getElementById('noteContent').value = '';
+      renderAll();
+    });
+
+    // Search Notes
+    document.getElementById('noteSearch').addEventListener('input', e => {
+      state.noteSearch = e.target.value;
+      renderNotes();
+      saveState();
+    });
+
+    // Add Journal Entry
+    document.getElementById('journalForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const headline = document.getElementById('journalHeadline').value.trim();
+      const mood = document.getElementById('journalMood').value;
+      const body = document.getElementById('journalBody').value.trim();
+      if (!headline || !body) return;
+      markStateChanged();
+      state.journal.unshift({ id: makeId('j'), headline, mood, body, timestamp: new Date().toISOString() });
+      document.getElementById('journalHeadline').value = '';
+      document.getElementById('journalBody').value = '';
+      renderAll();
+    });
+
+    // Delegated Actions for Checkboxes, Sliders & Delete Buttons
+    document.querySelector('main').addEventListener('click', e => {
+      const target = e.target;
+      const action = target.getAttribute('data-action');
+      const id = target.getAttribute('data-id');
+      if (!action || !id) return;
+      markStateChanged();
+
+      if (action === 'toggle-routine') {
+        const item = state.routines.find(r => r.id === id);
+        if (item) item.done = target.checked;
+        renderAll();
+      } else if (action === 'delete-routine') {
+        state.routines = state.routines.filter(r => r.id !== id);
+        renderAll();
+      } else if (action === 'toggle-class') {
+        const cls = state.classes.find(c => c.id === id);
+        if (cls) cls.attended = target.checked;
+        renderAll();
+      } else if (action === 'delete-class') {
+        state.classes = state.classes.filter(c => c.id !== id);
+        renderAll();
+      } else if (action === 'toggle-task') {
+        const task = state.tasks.find(t => t.id === id);
+        if (task) {
+          task.completed = target.checked;
+          task.progress = task.completed ? 100 : 0;
+        }
+        renderAll();
+      } else if (action === 'delete-task') {
+        state.tasks = state.tasks.filter(t => t.id !== id);
+        renderAll();
+      } else if (action === 'delete-note') {
+        state.notes = state.notes.filter(n => n.id !== id);
+        renderAll();
+      } else if (action === 'delete-journal') {
+        state.journal = state.journal.filter(j => j.id !== id);
+        renderAll();
+      }
+    });
+
+    document.querySelector('main').addEventListener('input', e => {
+      const target = e.target;
+      if (target.getAttribute('data-action') === 'slide-task') {
+        if (rolloverStateIfNeeded()) {
+          renderAll();
+          return;
+        }
+        const id = target.getAttribute('data-id');
+        const task = state.tasks.find(t => t.id === id);
+        if (task) {
+          task.progress = Math.min(100, Math.max(0, Number(target.value) || 0));
+          task.completed = task.progress === 100;
+          markStateChanged();
+          const card = target.closest('[data-task-card]');
+          if (card) {
+            card.querySelector('[data-action="toggle-task"]').checked = task.completed;
+            card.querySelector('[data-task-title]').classList.toggle('line-through', task.completed);
+            card.querySelector('[data-task-title]').classList.toggle('text-slate-400', task.completed);
+            card.querySelector('[data-task-title]').classList.toggle('text-slate-900', !task.completed);
+            card.querySelector('[data-task-progress]').textContent = `${task.progress}%`;
+            card.classList.toggle('border-emerald-200', task.completed);
+            card.classList.toggle('bg-emerald-50/20', task.completed);
+            card.classList.toggle('border-slate-200', !task.completed);
+          }
+          updateContinuousProgress();
+          renderWeeklyChart();
+          saveState();
+        }
+      }
+    });
+
+    function getReminderCandidates() {
+      const today = getLocalDateKey();
+      return [
+        ...state.routines.filter(item => !item.done).map(item => ({ id: item.id, kind: 'Routine', title: item.title, date: today, time: item.time })),
+        ...state.classes.filter(item => !item.attended).map(item => ({ id: item.id, kind: 'Class', title: item.subject, date: today, time: item.time })),
+        ...state.tasks.filter(item => !item.completed).map(item => ({
+          id: item.id, kind: 'Task', title: item.title,
+          date: item.type === 'recurring' ? today : item.dueDate || today, time: item.due
+        }))
+      ].filter(item => item.date && item.time).sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`));
+    }
+
+    const notifiedReminderKeys = new Set();
+    function checkScheduledNotifications() {
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      const now = new Date();
+      const today = getLocalDateKey(now);
+      for (const item of getReminderCandidates()) {
+        if (item.date !== today) continue;
+        const dueAt = new Date(`${item.date}T${item.time}:00`);
+        const age = now.getTime() - dueAt.getTime();
+        if (age < 0 || age > 24 * 60 * 60 * 1000) continue;
+        const key = `${item.date}:${item.kind}:${item.id}`;
+        if (notifiedReminderKeys.has(key)) continue;
+        try { if (localStorage.getItem(`dailyflow_notified_${key}`)) continue; } catch (e) {}
+        try {
+          new Notification(`${item.kind}: ${item.title}`, { body: `Scheduled for ${item.time}.`, tag: key });
+        } catch (error) {
+          continue;
+        }
+        notifiedReminderKeys.add(key);
+        try { localStorage.setItem(`dailyflow_notified_${key}`, '1'); } catch (e) {}
+      }
+    }
+
+    // Check Next Reminder Button
+    document.getElementById('simulateReminderBtn').addEventListener('click', () => {
+      const today = getLocalDateKey();
+      const candidates = [
+        ...state.routines.filter(item => !item.done).map(item => ({ kind: 'routine', date: today, time: item.time, item })),
+        ...state.classes.filter(item => !item.attended).map(item => ({ kind: 'class', date: today, time: item.time, item })),
+        ...state.tasks.filter(item => !item.completed).map(item => ({ kind: 'task', date: item.type === 'recurring' ? today : item.dueDate || today, time: item.due, item }))
+      ];
+      const now = new Date();
+      const nowKey = `${today}T${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      candidates.forEach(candidate => { candidate.sortKey = `${candidate.date}T${candidate.time || '23:59'}`; });
+      const ordered = candidates.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+      const next = ordered.find(candidate => candidate.sortKey >= nowKey) || ordered[0];
+
+      let message = '🎉 You have completed all scheduled routines, classes, and tasks for today!';
+      if (next) {
+        const overdue = next.sortKey < nowKey ? ' (overdue)' : '';
+        const dateText = next.date === today ? 'today' : next.date;
+        const timeText = next.time ? ` at ${next.time}` : '';
+        if (next.kind === 'routine') {
+          message = `⏰ Next Routine${overdue}: "${next.item.title}" ${dateText}${timeText} (${next.item.block}).`;
+        } else if (next.kind === 'class') {
+          message = `🎓 Next Class${overdue}: ${next.item.subject}${next.item.topic ? ` — ${next.item.topic}` : ''} ${dateText}${timeText}.`;
+        } else {
+          message = `✅ Next Task${overdue}: "${next.item.title}" (${next.item.priority} Priority, due ${dateText}${timeText}, ${next.item.progress}% done).`;
+        }
+      }
+
+      const banner = document.getElementById('reminderBanner');
+      document.getElementById('reminderBannerText').textContent = message;
+      banner.classList.remove('hidden');
+    });
+
+    document.getElementById('closeReminderBtn').addEventListener('click', () => {
+      document.getElementById('reminderBanner').classList.add('hidden');
+    });
+
+    document.getElementById('enableNotificationsBtn').addEventListener('click', async () => {
+      const button = document.getElementById('enableNotificationsBtn');
+      if (!('Notification' in window)) {
+        document.getElementById('reminderBannerText').textContent = 'This browser does not support notifications.';
+        document.getElementById('reminderBanner').classList.remove('hidden');
+        return;
+      }
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          button.textContent = 'Notifications Enabled';
+          checkScheduledNotifications();
+          document.getElementById('reminderBannerText').textContent = 'Notifications are enabled while DailyFlow is open.';
+        } else {
+          document.getElementById('reminderBannerText').textContent = 'Notification permission was not granted. Use Check Next Reminder for an in-page reminder.';
+        }
+      } catch (error) {
+        document.getElementById('reminderBannerText').textContent = 'Notifications could not be enabled in this browser context.';
+      }
+      document.getElementById('reminderBanner').classList.remove('hidden');
+    });
+    window.setInterval(checkScheduledNotifications, 30 * 1000);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) checkScheduledNotifications();
+    });
+
+    document.getElementById('resetDemoBtn').addEventListener('click', () => {
+      state = getInitialSampleState();
+      markStateChanged();
+      renderAll();
+    });
+
+    // Focus Timer Engine
+    let timerSeconds = 25 * 60;
+    let timerInterval = null;
+    let timerDeadline = null;
+
+    function updateTimerReadout() {
+      const mins = String(Math.floor(timerSeconds / 60)).padStart(2, '0');
+      const secs = String(timerSeconds % 60).padStart(2, '0');
+      document.getElementById('focusTimerDisplay').textContent = `${mins}:${secs}`;
+    }
+
+    function tickTimer() {
+      timerSeconds = Math.max(0, Math.ceil((timerDeadline - Date.now()) / 1000));
+      updateTimerReadout();
+      if (timerSeconds === 0) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        timerDeadline = null;
+        rolloverStateIfNeeded();
+        markStateChanged();
+        state.focusSessions = (state.focusSessions || 0) + 1;
+        document.getElementById('toggleTimerBtn').textContent = 'Start';
+        renderAll();
+        const banner = document.getElementById('reminderBanner');
+        document.getElementById('reminderBannerText').textContent = '🎉 25-Minute Focus Session Complete! +1 session added to your daily log.';
+        banner.classList.remove('hidden');
+      }
+    }
+
+    document.getElementById('toggleTimerBtn').addEventListener('click', () => {
+      const btn = document.getElementById('toggleTimerBtn');
+      if (timerInterval) {
+        timerSeconds = Math.max(0, Math.ceil((timerDeadline - Date.now()) / 1000));
+        clearInterval(timerInterval);
+        timerInterval = null;
+        timerDeadline = null;
+        updateTimerReadout();
+        btn.textContent = 'Start';
+      } else {
+        if (timerSeconds === 0) timerSeconds = 25 * 60;
+        timerDeadline = Date.now() + timerSeconds * 1000;
+        btn.textContent = 'Pause';
+        tickTimer();
+        if (timerDeadline !== null) timerInterval = setInterval(tickTimer, 250);
+      }
+    });
+
+    document.getElementById('resetTimerBtn').addEventListener('click', () => {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+      timerDeadline = null;
+      timerSeconds = 25 * 60;
+      document.getElementById('toggleTimerBtn').textContent = 'Start';
+      updateTimerReadout();
+    });
+
+    // Export JSON Data
+    document.getElementById('exportDataBtn').addEventListener('click', () => {
+      const backup = { ...state, schemaVersion: 2, exportedAt: new Date().toISOString() };
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+      const dataUrl = URL.createObjectURL(blob);
+      const dlAnchor = document.createElement('a');
+      dlAnchor.setAttribute('href', dataUrl);
+      dlAnchor.setAttribute('download', 'dailyflow_backup.json');
+      document.body.appendChild(dlAnchor);
+      dlAnchor.click();
+      dlAnchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(dataUrl), 1000);
+    });
+
+    document.getElementById('importDataBtn').addEventListener('click', () => {
+      document.getElementById('restoreFileInput').click();
+    });
+
+    document.getElementById('restoreFileInput').addEventListener('change', async e => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const banner = document.getElementById('reminderBanner');
+      const bannerText = document.getElementById('reminderBannerText');
+      try {
+        if (file.size > 5 * 1024 * 1024) throw new Error('Backup must be smaller than 5 MB.');
+        const backup = JSON.parse(await file.text());
+        const imported = backup?.state && typeof backup.state === 'object' ? backup.state : backup;
+        const collections = ['routines', 'classes', 'tasks', 'notes', 'journal'];
+        if (!imported || collections.some(key => !Array.isArray(imported[key]))) {
+          throw new Error('This file is not a valid DailyFlow backup.');
+        }
+        if (!window.confirm('Replace the current DailyFlow data with this backup?')) return;
+        state = normalizeState(imported);
+        markStateChanged();
+        renderAll();
+        bannerText.textContent = 'Backup restored successfully.';
+      } catch (error) {
+        bannerText.textContent = `Could not restore backup: ${error.message}`;
+      } finally {
+        banner.classList.remove('hidden');
+        e.target.value = '';
+      }
+    });
+
+    // Dev Environment File Explorer & Terminal Simulator
+    function selectDevFile(fileName) {
+      const fileObj = DEV_FILES[fileName];
+      if (!fileObj) return;
+      document.getElementById('activeFileName').textContent = fileName;
+      document.getElementById('activeFileRole').textContent = fileObj.role;
+      document.getElementById('codeInspectorView').textContent = fileObj.code;
+      document.querySelectorAll('.dev-file-btn').forEach(btn => {
+        const active = btn.getAttribute('data-file') === fileName;
+        btn.className = `dev-file-btn w-full text-left text-xs code-font px-2.5 py-1.5 rounded ${active ? 'bg-indigo-600/30 text-indigo-300 font-medium' : 'hover:bg-slate-800 text-slate-300'}`;
+      });
+    }
+
+    document.querySelectorAll('.dev-file-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectDevFile(btn.getAttribute('data-file'));
+      });
+    });
+
+    document.getElementById('runBuildCheckBtn').addEventListener('click', async () => {
+      const out = document.getElementById('terminalOutput');
+      const totalItems = state.routines.length + state.classes.length + state.tasks.length;
+      const validCollections = ['routines', 'classes', 'tasks', 'notes', 'journal'].every(key => Array.isArray(state[key]));
+      const ids = [...state.routines, ...state.classes, ...state.tasks, ...state.notes, ...state.journal].map(item => item.id);
+      const uniqueIds = new Set(ids).size === ids.length;
+      let serverStatus = 'not connected';
+      try {
+        const health = await fetch('/api/health', { cache: 'no-store' });
+        serverStatus = health.ok ? 'API and SQLite are healthy' : `API returned ${health.status}`;
+      } catch (error) {}
+      out.textContent = `$ DailyFlow data check\n[State] ${validCollections ? 'All collections are valid.' : 'A collection is invalid.'}\n[IDs] ${uniqueIds ? 'All item IDs are unique.' : 'Duplicate item IDs found.'}\n[Progress] ${currentPercent}% across ${totalItems} trackable items.\n[Server] ${serverStatus}.`;
+    });
+
+    document.getElementById('inspectLiveStateBtn').addEventListener('click', () => {
+      document.querySelectorAll('.dev-file-btn').forEach(btn => {
+        btn.className = 'dev-file-btn w-full text-left text-xs code-font px-2.5 py-1.5 rounded hover:bg-slate-800 text-slate-300';
+      });
+      document.getElementById('activeFileName').textContent = 'live_state_snapshot.json';
+      document.getElementById('activeFileRole').textContent = 'Current client state; SQLite sync status appears above';
+      document.getElementById('codeInspectorView').textContent = JSON.stringify(state, null, 2);
+    });
+
+    // Initialize Dev File Viewer & Render App
+    selectDevFile('package.json');
+    renderAll();
+    connectServerSync();
+    window.addEventListener('online', connectServerSync);
+    window.setInterval(() => serverSyncReady ? pollServerState() : connectServerSync(), 15 * 1000);
+  </script>
+</body>
+</html>

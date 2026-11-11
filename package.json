@@ -1,0 +1,22 @@
+{
+  "name": "dailyflow-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "DailyFlow planner with local browser storage and an optional SQLite sync server",
+  "engines": {
+    "node": ">=24.15.0"
+  },
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "node --watch server/server.js",
+    "build:css": "tailwindcss -i ./src/input.css -o ./public/app.css --minify",
+    "test": "node tests/run.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "tailwindcss": "3.4.17"
+  }
+}
